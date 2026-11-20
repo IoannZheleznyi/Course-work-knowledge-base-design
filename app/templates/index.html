@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Поиск информации, фотографий, видео и статей о специях.">
+    <title>SpiceSearch — База знаний по специям</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <main class="hero" id="hero">
+        <div class="hero-overlay"></div>
+
+        <header class="header">
+            <a href="/" class="logo">
+                <span class="logo-icon">✦</span>
+                Spice<span class="logo-accent">Search</span>
+            </a>
+        </header>
+
+        <section class="hero-content">
+            <div class="eyebrow">МИР АРОМАТОВ И ВКУСОВ</div>
+
+            <h1>
+                База знаний<br>
+                <span>по специям</span>
+            </h1>
+
+            <p class="hero-description">
+                Находите информацию, фотографии, видео и актуальные материалы
+                о специях со всего мира.
+            </p>
+
+            <form class="search-form" id="searchForm">
+                <span class="search-icon">⌕</span>
+
+                <input
+                    type="search"
+                    id="searchInput"
+                    placeholder="Введите название специи..."
+                    autocomplete="off"
+                    required
+                >
+
+                <button type="submit">Найти</button>
+            </form>
+
+            <div class="search-error" id="searchError"></div>
+        </section>
+
+        <div class="hero-bottom">
+            <span>ОТКРОЙТЕ НОВЫЕ ВКУСЫ</span>
+            <span>SPICESEARCH · 2026</span>
+        </div>
+    </main>
+
+    <main class="results-page hidden" id="resultsPage">
+        <header class="results-header">
+            <a href="/" class="logo">
+                <span class="logo-icon">✦</span>
+                Spice<span class="logo-accent">Search</span>
+            </a>
+
+            <form class="search-form compact-search" id="resultsSearchForm">
+                <span class="search-icon">⌕</span>
+                <input
+                    type="search"
+                    id="resultsSearchInput"
+                    placeholder="Введите название специи..."
+                    required
+                >
+                <button type="submit">Найти</button>
+            </form>
+        </header>
+
+        <section class="results-content">
+            <button class="back-button" id="backButton">← На главную</button>
+
+            <h1 id="resultsTitle">Результаты поиска</h1>
+            <p class="results-subtitle" id="resultsSubtitle"></p>
+
+            <div id="loading" class="status-message hidden">
+                Ищем информацию в базе знаний и интернете...
+            </div>
+
+            <div id="resultsContainer"></div>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/search.js') }}"></script>
+</body>
+</html>
