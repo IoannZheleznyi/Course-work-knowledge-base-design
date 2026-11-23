@@ -1,8 +1,10 @@
+
 import os
 import re
 import requests
 import xml.etree.ElementTree as ET
 
+from functools import lru_cache
 from urllib.parse import quote_plus
 
 
@@ -15,7 +17,8 @@ HEADERS = {
 WIKIPEDIA_API = "https://ru.wikipedia.org/w/api.php"
 
 
-# Разрешённые специи и названия статей Википедии.
+# Известные названия специй и соответствующие статьи Википедии.
+# Если специи здесь нет, система попробует определить её через Википедию.
 WIKIPEDIA_ALIASES = {
     "анис": ["Анис"],
     "базилик": ["Базилик"],
@@ -37,7 +40,6 @@ WIKIPEDIA_ALIASES = {
     "фенхель": ["Фенхель"],
     "чёрный перец": ["Перец чёрный", "Чёрный перец"],
     "шафран": ["Шафран"],
-
     "ваниль": ["Ваниль"],
     "бадьян": ["Бадьян настоящий", "Бадьян"],
     "пажитник": ["Пажитник сенной", "Пажитник"],
@@ -71,7 +73,6 @@ WIKIMEDIA_IMAGE_NAMES = {
     "фенхель": "fennel",
     "чёрный перец": "black pepper",
     "шафран": "saffron",
-
     "ваниль": "vanilla",
     "бадьян": "star anise",
     "пажитник": "fenugreek",
@@ -90,10 +91,121 @@ def normalize_text(value):
     return " ".join(value.split())
 
 
+def is_spice_article(title, extract, categories):
+    """Проверяет, похожа ли статья Википедии на статью о специи."""
+    spice_words = (
+        "пряност",
+        "специ",
+        "приправа",
+        "приправ",
+        "пряное растение",
+        "пряный"
+    )
+
+    category_text = " ".join(categories).lower()
+    article_text = (title + " " + extract[:1800]).lower()
+
+    if any(word in category_text for word in spice_words):
+        return True
+
+    return any(word in article_text for word in spice_words)
+
+
+@lru_cache(maxsize=256)
+def find_spice_in_wikipedia(normalized_query):
+    """Ищет неизвестную специю в русской Википедии."""
+
+    if not normalized_query:
+        return None
+
+    try:
+        response = requests.get(
+            WIKIPEDIA_API,
+            params={
+                "action": "query",
+                "format": "json",
+                "list": "search",
+                "srsearch": normalized_query,
+                "srnamespace": 0,
+                "srlimit": 10
+            },
+            headers=HEADERS,
+            timeout=REQUEST_TIMEOUT
+        )
+        response.raise_for_status()
+
+        results = response.json().get("query", {}).get("search", [])
+
+        matching_titles = []
+
+        for item in results:
+            title = item.get("title", "")
+            normalized_title = normalize_text(title)
+
+            if (
+                normalized_title == normalized_query
+                or normalized_title.startswith(normalized_query + " ")
+            ):
+                matching_titles.append(title)
+
+        for title in matching_titles:
+            page_response = requests.get(
+                WIKIPEDIA_API,
+                params={
+                    "action": "query",
+                    "format": "json",
+                    "prop": "extracts|categories",
+                    "exintro": 1,
+                    "explaintext": 1,
+                    "cllimit": 50,
+                    "titles": title,
+                    "redirects": 1
+                },
+                headers=HEADERS,
+                timeout=REQUEST_TIMEOUT
+            )
+            page_response.raise_for_status()
+
+            pages = page_response.json().get(
+                "query", {}
+            ).get("pages", {})
+
+            for page in pages.values():
+                if page.get("missing"):
+                    continue
+
+                page_title = page.get("title", "")
+                extract = page.get("extract", "").strip()
+
+                categories = [
+                    category.get("title", "")
+                    for category in page.get("categories", [])
+                ]
+
+                if not extract:
+                    continue
+
+                if is_spice_article(
+                    page_title,
+                    extract,
+                    categories
+                ):
+                    return page_title
+
+    except (requests.RequestException, ValueError, KeyError):
+        return None
+
+    return None
+
+
 def get_spice_name(query):
-    """Определяет название специи по поисковому запросу."""
+    """Определяет название специи по запросу."""
     normalized_query = normalize_text(query)
 
+    if not normalized_query:
+        return None
+
+    # Сначала проверяем известные названия.
     for spice_name in WIKIPEDIA_ALIASES:
         normalized_name = normalize_text(spice_name)
 
@@ -103,7 +215,8 @@ def get_spice_name(query):
         ):
             return spice_name
 
-    return None
+    # Если названия нет в словаре, проверяем его через Википедию.
+    return find_spice_in_wikipedia(normalized_query)
 
 
 def contains_spice(text, spice_name):
@@ -127,7 +240,7 @@ def search_description(query):
         return None
 
     try:
-        aliases = WIKIPEDIA_ALIASES[spice_name]
+        aliases = WIKIPEDIA_ALIASES.get(spice_name, [spice_name])
 
         response = requests.get(
             WIKIPEDIA_API,
@@ -163,12 +276,6 @@ def search_description(query):
                 continue
 
             if normalize_text(title) not in allowed_titles:
-                continue
-
-            if not contains_spice(
-                title + " " + extract[:1500],
-                spice_name
-            ):
                 continue
 
             return {
