@@ -1,6 +1,7 @@
+
 from datetime import datetime
 
-from app import db
+from app.database import db
 
 
 class Category(db.Model):
@@ -10,10 +11,10 @@ class Category(db.Model):
     name = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.Text)
 
-    spices = db.relationship("Spice", back_populates="category")
-
-    def __repr__(self):
-        return f"<Category {self.name}>"
+    spices = db.relationship(
+        "Spice",
+        back_populates="category"
+    )
 
 
 class Spice(db.Model):
@@ -21,9 +22,9 @@ class Spice(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
-    slug = db.Column(db.String(120), unique=True, nullable=False)
+    slug = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.Text, nullable=False)
-    origin = db.Column(db.String(150))
+    origin = db.Column(db.String(255))
     usage = db.Column(db.Text)
 
     category_id = db.Column(
@@ -32,7 +33,10 @@ class Spice(db.Model):
         nullable=False
     )
 
-    category = db.relationship("Category", back_populates="spices")
+    category = db.relationship(
+        "Category",
+        back_populates="spices"
+    )
 
     articles = db.relationship(
         "Article",
@@ -52,20 +56,20 @@ class Spice(db.Model):
         cascade="all, delete-orphan"
     )
 
-    def __repr__(self):
-        return f"<Spice {self.name}>"
-
 
 class Article(db.Model):
     __tablename__ = "articles"
 
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(250), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
     content = db.Column(db.Text)
-    source_name = db.Column(db.String(150))
-    source_url = db.Column(db.String(500))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    source_name = db.Column(db.String(255))
+    source_url = db.Column(db.Text)
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
 
     spice_id = db.Column(
         db.Integer,
@@ -73,17 +77,20 @@ class Article(db.Model):
         nullable=False
     )
 
-    spice = db.relationship("Spice", back_populates="articles")
+    spice = db.relationship(
+        "Spice",
+        back_populates="articles"
+    )
 
 
 class Image(db.Model):
     __tablename__ = "images"
 
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
-    image_url = db.Column(db.String(500), nullable=False)
-    source_url = db.Column(db.String(500))
+    image_url = db.Column(db.Text, nullable=False)
+    source_url = db.Column(db.Text)
 
     spice_id = db.Column(
         db.Integer,
@@ -91,17 +98,20 @@ class Image(db.Model):
         nullable=False
     )
 
-    spice = db.relationship("Image", back_populates="spice")
+    spice = db.relationship(
+        "Spice",
+        back_populates="images"
+    )
 
 
 class Video(db.Model):
     __tablename__ = "videos"
 
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
-    video_url = db.Column(db.String(500), nullable=False)
-    source_name = db.Column(db.String(150))
+    video_url = db.Column(db.Text, nullable=False)
+    source_name = db.Column(db.String(255))
 
     spice_id = db.Column(
         db.Integer,
@@ -109,4 +119,7 @@ class Video(db.Model):
         nullable=False
     )
 
-    spice = db.relationship("Video", back_populates="spice")
+    spice = db.relationship(
+        "Spice",
+        back_populates="videos"
+    )
